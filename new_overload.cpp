@@ -6,41 +6,54 @@ static size_t new_calls_count = 0 ; // new calls count
 static size_t freed_up_memory = 0 ; // delete calls count
 
 
-auto failed_allocate {[](){throw std::bad_alloc() ;} } ;
+
 auto myNewHandler {[](){std::cerr << "Custom new_handler called. Unable to allocate memory." << std::endl;}}  ;
 
 
 //Overloads
 
 // operator new overload 
+
 void* operator new(size_t size)  
-{   if(size == empty_place ) ++size ;
+{  
+     if(size == empty_place ) ++size ;
 
     void* pointer = malloc(size);
 
-    if(pointer == nullptr) throw failed_allocate ;
+    if(pointer == nullptr) throw std::bad_alloc() ;
     ++new_calls_count;
    
-    return pointer; }
+    return pointer;
+}
+
 //operator delete overload
+
 void operator delete (void* pointer) noexcept
-{
+{ 
+    if(pointer) return ;
     free(pointer) ;
-    ++freed_up_memory ;  }
+    ++freed_up_memory ; 
+}
+
 // operator new[] overload
+
 void* operator new[](std::size_t size) {
      if(size == empty_place ) ++size ;
 
     void* pointer = malloc(size);
 
-    if(pointer == nullptr) throw failed_allocate ;
+    if(pointer == nullptr) throw std::bad_alloc() ;
     ++new_calls_count;
    
     return pointer;
     
 }
+
 // operator delete[] overload
-void operator delete[](void* pointer) noexcept {
+
+void operator delete[](void* pointer) noexcept
+{   
+    if(pointer) return ;
     ++freed_up_memory;
     free(pointer);
 } 
@@ -49,7 +62,8 @@ void operator delete[](void* pointer) noexcept {
 
 // test function for types
 template <typename T>
-void checking_new (T value){
+void checking_new (T value)
+{
   auto ptr(std::make_unique<T>(value));
        
         std:: cout << *ptr <<std:: endl ;
@@ -58,7 +72,8 @@ void checking_new (T value){
 
 // test function for arrays
 template <typename T>
-void checking_new_array(size_t size,T value ) {
+void checking_new_array(size_t size,T value ) 
+{
     auto arrptr = std::make_unique<T[]>(size);
     for (int i = 0 ; i < size ; ++ i){
         arrptr[i] = value ;
@@ -69,9 +84,11 @@ void checking_new_array(size_t size,T value ) {
 
 
 
-int main () {
+int main () 
+{
   // std::set_new_handler(myNewHandler);
-    try {
+    try 
+    {
         checking_new(5);
         std::cout << "NewCalls: " << new_calls_count << '\n'<<
         "FreeCalls: " << freed_up_memory << std::endl ;
