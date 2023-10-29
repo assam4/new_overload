@@ -32,6 +32,7 @@ void operator delete (void* pointer) noexcept
 { 
     if(pointer) return ;
     free(pointer) ;
+     pointer = nullptr ;
     ++freed_up_memory ; 
 }
 
@@ -54,8 +55,9 @@ void* operator new[](std::size_t size) {
 void operator delete[](void* pointer) noexcept
 {   
     if(pointer) return ;
-    ++freed_up_memory;
     free(pointer);
+    pointer = nullptr ;
+    ++freed_up_memory;
 } 
 
 // Testing functions
