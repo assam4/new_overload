@@ -1,105 +1,89 @@
 #include <iostream>
 #include <memory>
 
-const int empty_place = 0 ;  //checking value
-static size_t new_calls_count = 0 ; // new calls count
-static size_t freed_up_memory = 0 ; // delete calls count
+static constexpr unsigned Empty_place = 0 ;  // checking value
+static size_t Allocate_count = 0 ; // new calls count
+static size_t Deallocate_count = 0 ; // delete calls count
 
-
-
-auto myNewHandler {[](){std::cerr << "Custom new_handler called. Unable to allocate memory." << std::endl;}}  ;
-
-
-//Overloads
-
-// operator new overload 
-
-void* operator new(size_t size)  
+void* operator new(size_t size)  // global new operator overload
 {  
-     if(size == empty_place ) ++size ;
-
-    void* pointer = malloc(size);
-
-    if(pointer == nullptr) throw std::bad_alloc() ;
-    ++new_calls_count;
-   
-    return pointer;
+     ++Allocate_count ; // increase the counter
+     if(size <= Empty_place ) ++ size ; // checking size parameter
+     void* pointer = malloc(size) ;
+     if(!pointer) throw std::bad_alloc() ; // May be malloc allocation crashed :D
+     return pointer;   
 }
 
-//operator delete overload
-
-void operator delete (void* pointer) noexcept
+void operator delete (void* pointer) noexcept // global delete operator overload
 { 
-    if(pointer) return ;
-    free(pointer) ;
-     pointer = nullptr ;
-    ++freed_up_memory ; 
+     ++Deallocate_count ; // increase the counter
+    if( !pointer ) return ; // if pointer is nullptr
+    free(pointer) ; // deallocate memory
+     pointer = nullptr ; // set pointer nullptr 
 }
 
-// operator new[] overload
-
-void* operator new[](std::size_t size) {
-     if(size == empty_place ) ++size ;
-
-    void* pointer = malloc(size);
-
-    if(pointer == nullptr) throw std::bad_alloc() ;
-    ++new_calls_count;
-   
-    return pointer;
-    
+void* operator new[] (size_t size)  // global operator new[] overload
+{
+     ++Allocate_count ;
+     if(size <= Empty_place ) ++size ;
+     void* pointer = malloc(size); 
+     if(!pointer) throw std::bad_alloc() ; // May be malloc allocation crashed :D
+     return pointer;
 }
 
-// operator delete[] overload
-
-void operator delete[](void* pointer) noexcept
+void operator delete[](void* pointer) noexcept // global operator delete[] overload
 {   
-    if(pointer) return ;
-    free(pointer);
-    pointer = nullptr ;
-    ++freed_up_memory;
+     ++Deallocate_count ;
+    if(!pointer) return ; // if nullptr
+    free(pointer); // deallocate
+    pointer = nullptr ; // set valid value
 } 
 
-// Testing functions
+// test function for overloads
 
-// test function for types
 template <typename T>
-void checking_new (T value)
+void single_new (T value)
 {
-  auto ptr(std::make_unique<T>(value));
-       
-        std:: cout << *ptr <<std:: endl ;
-        std:: cout << &ptr << std::endl ;
-};
+    auto smart_ptr = std::make_unique<T>(value) ;
+    std::cout << "Object value: "<< *smart_ptr
+              << "Address: " << smart_ptr.get()
+              << std::endl ;
+}
 
-// test function for arrays
 template <typename T>
-void checking_new_array(size_t size,T value ) 
+void array_new (int size , T value ) 
 {
-    auto arrptr = std::make_unique<T[]>(size);
-    for (int i = 0 ; i < size ; ++ i){
-        arrptr[i] = value ;
-        std:: cout << arrptr[i] <<std:: endl ;
-        std:: cout << &arrptr[i] << std::endl ;
+    if(size <= Empty_place) return ;
+    auto array_pointer = std::make_unique<T[]>(size);
+    for (int i = 0 ; i < size ; ++ i)
+    {
+        array_pointer[i] = value ;
+        std::cout   <<"Index "<< i << "value: " << array_pointer[i] 
+                    << "Index Address: " << &array_pointer[i]
+                    << std::endl ;
     }
-};
-
-
+}
 
 int main () 
 {
-  // std::set_new_handler(myNewHandler);
+    auto print_result = []() { std::cout << "Allocations: " << Allocate_count <<  "  Dealloactions: " << Deallocate_count << std::endl ; } ;
     try 
     {
-        checking_new(5);
-        std::cout << "NewCalls: " << new_calls_count << '\n'<<
-        "FreeCalls: " << freed_up_memory << std::endl ;
-        checking_new_array(5,5);
-       std::cout << "NewCalls: " << new_calls_count << '\n'<<
-        "FreeCalls: " << freed_up_memory << std::endl ;
+        single_new (5) ;
+        print_result() ;
+        array_new(5,5) ;
+        print_result() ;
         return 0 ;
     }
-    catch(std::bad_alloc&){std::cerr<<"Memory allocate Failed !.";exit(1);}
-    catch(...){std::cerr << "Unknown Error" ; exit(2) ;}
+    catch(std::bad_alloc& error)
+    { 
+        std::cerr << error.what() ;
+        return 1;
+    }
+    catch(...)
+    {
+        std::cerr << "Unknown Error" ; 
+        return 2 ;
+    }
 
 }
